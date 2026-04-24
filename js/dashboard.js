@@ -758,9 +758,7 @@ const FocusTimer = (function() {
   let remainingTime = 0; // Remaining time in seconds
   let isRunning = false;
   let intervalId = null;
-  let audioContext = null; // Audio context for completion sound
-  let soundTimeouts = []; // Timeouts for scheduled beeps
-  let activeOscillators = []; // Active oscillators for immediate stop
+  let alarmAudio = null; // Audio element for alarm sound
   
   // DOM element references
   let timerDisplay = null;
@@ -794,74 +792,25 @@ const FocusTimer = (function() {
   }
 
   /**
-   * Play completion sound using Web Audio API
-   * Creates 60 second beep pattern with crescendo (quiet to loud)
+   * Play completion sound using HTML5 Audio
+   * Plays alarm.mp3 from audio folder
    * @private
    */
   function playCompletionSound() {
     try {
-      // Check if Web Audio API is supported
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) {
-        console.warn('[FocusTimer] Web Audio API not supported');
+      if (!alarmAudio) {
+        console.warn('[FocusTimer] Alarm audio element not found');
         return;
       }
 
       // Stop any existing sound
       stopCompletionSound();
 
-      // Create audio context
-      audioContext = new AudioContext();
-      
-      // Beep pattern: 60 beeps over 60 seconds with crescendo
-      // Beep every 1 second from 0s to 59s
-      const beepCount = 60;
-      
-      for (let i = 0; i < beepCount; i++) {
-        const delay = i * 1000; // 1 second intervals
-        
-        // Frequency increases from 400Hz to 1200Hz
-        const frequency = 400 + (i * (800 / (beepCount - 1)));
-        
-        // Volume crescendo from 0.05 to 0.7
-        const volume = 0.05 + (i * (0.65 / (beepCount - 1)));
-        
-        const timeout = setTimeout(function() {
-          try {
-            if (!audioContext) return; // Check if stopped
-            
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = frequency;
-            oscillator.type = 'sine';
-            gainNode.gain.value = volume;
-            
-            // Track active oscillator for stopping
-            activeOscillators.push(oscillator);
-            
-            // Each beep lasts 300ms
-            const startTime = audioContext.currentTime;
-            oscillator.start(startTime);
-            oscillator.stop(startTime + 0.3);
-            
-            // Remove from active list after it stops
-            oscillator.onended = function() {
-              const index = activeOscillators.indexOf(oscillator);
-              if (index > -1) {
-                activeOscillators.splice(index, 1);
-              }
-            };
-          } catch (e) {
-            console.error('[FocusTimer] Error playing beep:', e);
-          }
-        }, delay);
-        
-        soundTimeouts.push(timeout);
-      }
+      // Reset audio to beginning and play
+      alarmAudio.currentTime = 0;
+      alarmAudio.play().catch(function(e) {
+        console.error('[FocusTimer] Error playing alarm sound:', e);
+      });
       
     } catch (e) {
       console.error('[FocusTimer] Error playing completion sound:', e);
@@ -870,32 +819,14 @@ const FocusTimer = (function() {
 
   /**
    * Stop completion sound
-   * Clears all scheduled beeps, stops active oscillators, and closes audio context
+   * Pauses alarm audio and resets to beginning
    * @private
    */
   function stopCompletionSound() {
     try {
-      // Clear all scheduled beeps
-      soundTimeouts.forEach(function(timeout) {
-        clearTimeout(timeout);
-      });
-      soundTimeouts = [];
-      
-      // Stop all active oscillators immediately
-      activeOscillators.forEach(function(oscillator) {
-        try {
-          oscillator.stop();
-          oscillator.disconnect();
-        } catch (e) {
-          // Oscillator may already be stopped, ignore error
-        }
-      });
-      activeOscillators = [];
-      
-      // Close audio context
-      if (audioContext) {
-        audioContext.close();
-        audioContext = null;
+      if (alarmAudio) {
+        alarmAudio.pause();
+        alarmAudio.currentTime = 0;
       }
     } catch (e) {
       console.error('[FocusTimer] Error stopping completion sound:', e);
@@ -1190,6 +1121,7 @@ const FocusTimer = (function() {
       durationInput = document.getElementById('timer-duration');
       secondsInput = document.getElementById('timer-seconds');
       timerComplete = document.getElementById('timer-complete');
+      alarmAudio = document.getElementById('timer-alarm');
       
       // Check if required elements exist
       if (!timerDisplay) {

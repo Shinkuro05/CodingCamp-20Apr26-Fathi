@@ -794,7 +794,7 @@ const FocusTimer = (function() {
 
   /**
    * Play completion sound using Web Audio API
-   * Creates 10 second beep pattern with crescendo (quiet to loud)
+   * Creates 60 second beep pattern with crescendo (quiet to loud)
    * @private
    */
   function playCompletionSound() {
@@ -812,13 +812,19 @@ const FocusTimer = (function() {
       // Create audio context
       audioContext = new AudioContext();
       
-      // Beep pattern: 10 beeps over 10 seconds with crescendo
-      // Beep every 1 second: 0s, 1s, 2s, 3s, 4s, 5s, 6s, 7s, 8s, 9s
-      const beepTimes = [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000];
-      const frequencies = [600, 650, 700, 750, 800, 850, 900, 950, 1000, 1100]; // Ascending tones
-      const volumes = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6]; // Crescendo: quiet to loud
+      // Beep pattern: 60 beeps over 60 seconds with crescendo
+      // Beep every 1 second from 0s to 59s
+      const beepCount = 60;
       
-      beepTimes.forEach(function(delay, index) {
+      for (let i = 0; i < beepCount; i++) {
+        const delay = i * 1000; // 1 second intervals
+        
+        // Frequency increases from 400Hz to 1200Hz
+        const frequency = 400 + (i * (800 / (beepCount - 1)));
+        
+        // Volume crescendo from 0.05 to 0.7
+        const volume = 0.05 + (i * (0.65 / (beepCount - 1)));
+        
         const timeout = setTimeout(function() {
           try {
             if (!audioContext) return; // Check if stopped
@@ -829,9 +835,9 @@ const FocusTimer = (function() {
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
             
-            oscillator.frequency.value = frequencies[index];
+            oscillator.frequency.value = frequency;
             oscillator.type = 'sine';
-            gainNode.gain.value = volumes[index]; // Crescendo effect
+            gainNode.gain.value = volume;
             
             // Each beep lasts 300ms
             oscillator.start(audioContext.currentTime);
@@ -842,7 +848,7 @@ const FocusTimer = (function() {
         }, delay);
         
         soundTimeouts.push(timeout);
-      });
+      }
       
     } catch (e) {
       console.error('[FocusTimer] Error playing completion sound:', e);

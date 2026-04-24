@@ -789,6 +789,61 @@ const FocusTimer = (function() {
   }
 
   /**
+   * Play completion sound using Web Audio API
+   * Creates simple beep sound without external audio files
+   * @private
+   */
+  function playCompletionSound() {
+    try {
+      // Check if Web Audio API is supported
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) {
+        console.warn('[FocusTimer] Web Audio API not supported');
+        return;
+      }
+
+      // Create audio context
+      const audioContext = new AudioContext();
+      
+      // Create oscillator (tone generator)
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      // Connect nodes: oscillator -> gain -> output
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Configure sound: 800Hz beep, 0.3 volume
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.3;
+      
+      // Play beep for 200ms
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+      
+      // Play second beep after 300ms
+      setTimeout(function() {
+        const oscillator2 = audioContext.createOscillator();
+        const gainNode2 = audioContext.createGain();
+        
+        oscillator2.connect(gainNode2);
+        gainNode2.connect(audioContext.destination);
+        
+        oscillator2.frequency.value = 1000;
+        oscillator2.type = 'sine';
+        gainNode2.gain.value = 0.3;
+        
+        oscillator2.start(audioContext.currentTime);
+        oscillator2.stop(audioContext.currentTime + 0.2);
+      }, 300);
+      
+    } catch (e) {
+      console.error('[FocusTimer] Error playing completion sound:', e);
+    }
+  }
+
+  /**
    * Start the countdown timer
    * Begins countdown from current remainingTime
    * @public
@@ -826,6 +881,18 @@ const FocusTimer = (function() {
             if (timerComplete) {
               timerComplete.classList.remove('hidden');
             }
+            
+            // Show notification
+            if (typeof NotificationManager !== 'undefined') {
+              NotificationManager.showNotification(
+                'Focus session complete! Time for a break.',
+                'success',
+                5000
+              );
+            }
+            
+            // Play completion sound
+            playCompletionSound();
             
             // Publish timer:complete event
             EventBus.emit('timer:complete', { duration: duration });

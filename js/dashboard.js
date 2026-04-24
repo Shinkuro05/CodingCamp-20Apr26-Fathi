@@ -1116,18 +1116,6 @@ const FocusTimer = (function() {
       return false;
     }
 
-    // Validate total duration is not zero
-    if (parsedMinutes === 0 && parsedSeconds === 0) {
-      if (typeof NotificationManager !== 'undefined') {
-        NotificationManager.showNotification(
-          'Timer duration must be greater than 0',
-          'warning',
-          3000
-        );
-      }
-      return false;
-    }
-
     // Update duration
     durationMinutes = parsedMinutes;
     durationSeconds = parsedSeconds;

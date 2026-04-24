@@ -760,6 +760,7 @@ const FocusTimer = (function() {
   let intervalId = null;
   let audioContext = null; // Audio context for completion sound
   let soundTimeouts = []; // Timeouts for scheduled beeps
+  let activeOscillators = []; // Active oscillators for immediate stop
   
   // DOM element references
   let timerDisplay = null;
@@ -839,9 +840,21 @@ const FocusTimer = (function() {
             oscillator.type = 'sine';
             gainNode.gain.value = volume;
             
+            // Track active oscillator for stopping
+            activeOscillators.push(oscillator);
+            
             // Each beep lasts 300ms
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.3);
+            const startTime = audioContext.currentTime;
+            oscillator.start(startTime);
+            oscillator.stop(startTime + 0.3);
+            
+            // Remove from active list after it stops
+            oscillator.onended = function() {
+              const index = activeOscillators.indexOf(oscillator);
+              if (index > -1) {
+                activeOscillators.splice(index, 1);
+              }
+            };
           } catch (e) {
             console.error('[FocusTimer] Error playing beep:', e);
           }
@@ -857,7 +870,7 @@ const FocusTimer = (function() {
 
   /**
    * Stop completion sound
-   * Clears all scheduled beeps and closes audio context
+   * Clears all scheduled beeps, stops active oscillators, and closes audio context
    * @private
    */
   function stopCompletionSound() {
@@ -867,6 +880,17 @@ const FocusTimer = (function() {
         clearTimeout(timeout);
       });
       soundTimeouts = [];
+      
+      // Stop all active oscillators immediately
+      activeOscillators.forEach(function(oscillator) {
+        try {
+          oscillator.stop();
+          oscillator.disconnect();
+        } catch (e) {
+          // Oscillator may already be stopped, ignore error
+        }
+      });
+      activeOscillators = [];
       
       // Close audio context
       if (audioContext) {

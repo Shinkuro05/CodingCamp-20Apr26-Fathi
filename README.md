@@ -23,8 +23,8 @@ Personal productivity dashboard with time tracking, task management, and quick l
 
 ## Setup
 
-1. Clone or download repository
-2. Open `index.html` in browser
+1. Clone, download my repository or access my link https://shinkuro05.github.io/CodingCamp-20Apr26-Fathi/
+2. If you clone or download my repos, open `index.html` in browser 
 3. No build process or dependencies required
 
 ## Browser Support

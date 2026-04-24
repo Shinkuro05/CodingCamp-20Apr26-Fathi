@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A productivity dashboard combining time awareness, focus management, task tracking, and quick access to favorite websites">
+  <title>To-Do List Life Dashboard</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <!-- Theme Toggle -->
+  <div id="theme-toggle-container">
+    <button id="theme-toggle" aria-label="Toggle theme">
+      <span class="theme-icon">🌙</span>
+    </button>
+  </div>
+
+  <!-- Data Export/Import Controls -->
+  <div id="data-controls-container">
+    <button id="data-export" aria-label="Export data">Export Data</button>
+    <button id="data-import" aria-label="Import data">Import Data</button>
+    <input id="data-import-file" type="file" accept=".json" style="display: none;" aria-label="Select data file">
+  </div>
+
+  <!-- Notification Container -->
+  <div id="notification-container" class="hidden" role="alert" aria-live="polite"></div>
+
+  <!-- Main Container -->
+  <main class="dashboard-container">
+    <!-- Greeting Section -->
+    <section id="greeting-section">
+      <div id="time-display">00:00</div>
+      <div id="date-display">Loading...</div>
+      <div id="greeting-message">Welcome</div>
+      <input id="name-input" type="text" placeholder="Enter your name" aria-label="Your name">
+    </section>
+
+    <!-- Timer and Tasks Row -->
+    <div class="row-container">
+      <!-- Timer Section -->
+      <section id="timer-section">
+        <h2>Focus Timer</h2>
+        <div id="timer-display">25:00</div>
+        <div id="timer-controls">
+          <button id="timer-start" aria-label="Start timer">Start</button>
+          <button id="timer-stop" aria-label="Stop timer">Stop</button>
+          <button id="timer-reset" aria-label="Reset timer">Reset</button>
+        </div>
+        <div id="timer-duration-container">
+          <label for="timer-duration">Duration (minutes):</label>
+          <input id="timer-duration" type="number" min="1" max="60" value="25" aria-label="Timer duration in minutes">
+        </div>
+        <div id="timer-complete" class="hidden" role="alert">Timer Complete!</div>
+      </section>
+
+      <!-- Task Section -->
+      <section id="task-section">
+        <h2>Tasks</h2>
+        <div id="task-input-container">
+          <input id="task-input" type="text" placeholder="Add a new task" aria-label="New task description">
+          <button id="task-add" aria-label="Add task">Add</button>
+        </div>
+        <div id="task-sort">
+          <label for="task-sort-select">Sort by:</label>
+          <select id="task-sort-select" aria-label="Sort tasks">
+            <option value="creation">Creation Order</option>
+            <option value="alphabetical">Alphabetical</option>
+            <option value="completion">Completion Status</option>
+          </select>
+        </div>
+        <ul id="task-list" role="list">
+          <!-- Task items will be rendered here -->
+        </ul>
+      </section>
+    </div>
+
+    <!-- Links Section -->
+    <section id="links-section">
+      <h2>Quick Links</h2>
+      <div id="link-input-container">
+        <input id="link-name" type="text" placeholder="Link name" aria-label="Link name">
+        <input id="link-url" type="url" placeholder="https://example.com" aria-label="Link URL">
+        <button id="link-add" aria-label="Add link">Add Link</button>
+      </div>
+      <ul id="link-list" role="list">
+        <!-- Link items will be rendered here -->
+      </ul>
+    </section>
+  </main>
+
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

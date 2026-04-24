@@ -1139,13 +1139,8 @@ const FocusTimer = (function() {
       if (durationInput && secondsInput) {
         const newMinutes = durationInput.value;
         const newSeconds = secondsInput.value;
-        const success = setDuration(newMinutes, newSeconds);
-        
-        // If invalid, reset inputs to current duration
-        if (!success) {
-          durationInput.value = durationMinutes;
-          secondsInput.value = durationSeconds;
-        }
+        setDuration(newMinutes, newSeconds);
+        // Allow any input values, don't reset on validation failure
       }
     } catch (e) {
       console.error('[FocusTimer] Error handling duration change:', e);

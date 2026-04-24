@@ -48,7 +48,9 @@
         </div>
         <div id="timer-duration-container">
           <label for="timer-duration">Duration (minutes):</label>
-          <input id="timer-duration" type="number" min="1" max="60" value="25" aria-label="Timer duration in minutes">
+          <input id="timer-duration" type="number" min="0" max="60" value="25" aria-label="Timer duration in minutes">
+          <label for="timer-seconds">Seconds:</label>
+          <input id="timer-seconds" type="number" min="0" max="59" value="0" aria-label="Timer duration in seconds">
         </div>
         <div id="timer-complete" class="hidden" role="alert">Timer Complete!</div>
       </section>

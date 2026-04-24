@@ -788,7 +788,8 @@ body.dark-theme #timer-reset {
   font-weight: var(--font-weight-medium);
 }
 
-#timer-duration {
+#timer-duration,
+#timer-seconds {
   width: 80px;
   padding: var(--spacing-sm);
   border: 2px solid var(--color-border);
@@ -800,13 +801,15 @@ body.dark-theme #timer-reset {
   transition: all var(--transition-fast);
 }
 
-#timer-duration:focus {
+#timer-duration:focus,
+#timer-seconds:focus {
   outline: none;
   border-color: var(--color-border-focus);
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
-#timer-duration:disabled {
+#timer-duration:disabled,
+#timer-seconds:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background-color: var(--color-border-light);

@@ -6,8 +6,8 @@ Personal productivity dashboard with time tracking, task management, and quick l
 
 - **Live Clock & Date**: Real-time display with HH:MM:SS format
 - **Personalized Greeting**: Custom name input with localStorage persistence
-- **Pomodoro Timer**: 25-minute focus sessions with start/stop/reset controls
-- **Timer Notifications**: Visual notification, sound alert, and browser notification when timer completes
+- **Pomodoro Timer**: Configurable focus sessions with minutes and seconds, start/stop/reset controls
+- **Timer Notifications**: Visual notification, 5.5-second sound alert (5 ascending beeps), and browser notification when timer completes. Stop button also stops sound.
 - **Task Management**: Add, complete, delete tasks with sort options (date added, alphabetical, completion status)
 - **Quick Links**: Customizable shortcuts to frequently visited sites
 - **Theme Toggle**: Light/dark mode with localStorage persistence

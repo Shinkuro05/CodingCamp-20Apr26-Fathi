@@ -753,10 +753,13 @@ const GreetingComponent = (function() {
  */
 const FocusTimer = (function() {
   // Private state
-  let duration = 25; // Default 25 minutes
+  let durationMinutes = 25; // Default 25 minutes
+  let durationSeconds = 0; // Default 0 seconds
   let remainingTime = 0; // Remaining time in seconds
   let isRunning = false;
   let intervalId = null;
+  let audioContext = null; // Audio context for completion sound
+  let soundTimeouts = []; // Timeouts for scheduled beeps
   
   // DOM element references
   let timerDisplay = null;
@@ -764,6 +767,7 @@ const FocusTimer = (function() {
   let stopButton = null;
   let resetButton = null;
   let durationInput = null;
+  let secondsInput = null;
   let timerComplete = null;
 
   /**
@@ -790,7 +794,7 @@ const FocusTimer = (function() {
 
   /**
    * Play completion sound using Web Audio API
-   * Creates simple beep sound without external audio files
+   * Creates 5.5 second beep pattern without external audio files
    * @private
    */
   function playCompletionSound() {
@@ -802,44 +806,68 @@ const FocusTimer = (function() {
         return;
       }
 
+      // Stop any existing sound
+      stopCompletionSound();
+
       // Create audio context
-      const audioContext = new AudioContext();
+      audioContext = new AudioContext();
       
-      // Create oscillator (tone generator)
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+      // Beep pattern: 5 beeps over 5.5 seconds
+      // Beep at: 0s, 1s, 2s, 3s, 4.5s
+      const beepTimes = [0, 1000, 2000, 3000, 4500];
+      const frequencies = [800, 900, 1000, 1100, 1200]; // Ascending tones
       
-      // Connect nodes: oscillator -> gain -> output
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // Configure sound: 800Hz beep, 0.3 volume
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-      gainNode.gain.value = 0.3;
-      
-      // Play beep for 200ms
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.2);
-      
-      // Play second beep after 300ms
-      setTimeout(function() {
-        const oscillator2 = audioContext.createOscillator();
-        const gainNode2 = audioContext.createGain();
+      beepTimes.forEach(function(delay, index) {
+        const timeout = setTimeout(function() {
+          try {
+            if (!audioContext) return; // Check if stopped
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequencies[index];
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.3;
+            
+            // Each beep lasts 200ms
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+          } catch (e) {
+            console.error('[FocusTimer] Error playing beep:', e);
+          }
+        }, delay);
         
-        oscillator2.connect(gainNode2);
-        gainNode2.connect(audioContext.destination);
-        
-        oscillator2.frequency.value = 1000;
-        oscillator2.type = 'sine';
-        gainNode2.gain.value = 0.3;
-        
-        oscillator2.start(audioContext.currentTime);
-        oscillator2.stop(audioContext.currentTime + 0.2);
-      }, 300);
+        soundTimeouts.push(timeout);
+      });
       
     } catch (e) {
       console.error('[FocusTimer] Error playing completion sound:', e);
+    }
+  }
+
+  /**
+   * Stop completion sound
+   * Clears all scheduled beeps and closes audio context
+   * @private
+   */
+  function stopCompletionSound() {
+    try {
+      // Clear all scheduled beeps
+      soundTimeouts.forEach(function(timeout) {
+        clearTimeout(timeout);
+      });
+      soundTimeouts = [];
+      
+      // Close audio context
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+    } catch (e) {
+      console.error('[FocusTimer] Error stopping completion sound:', e);
     }
   }
 
@@ -897,9 +925,13 @@ const FocusTimer = (function() {
 
       isRunning = true;
       
-      // Disable duration input while timer is running
+      // Disable duration inputs while timer is running
       if (durationInput) {
         durationInput.disabled = true;
+      }
+      
+      if (secondsInput) {
+        secondsInput.disabled = true;
       }
 
       // Hide completion indicator
@@ -938,7 +970,7 @@ const FocusTimer = (function() {
             playCompletionSound();
             
             // Publish timer:complete event
-            EventBus.emit('timer:complete', { duration: duration });
+            EventBus.emit('timer:complete', { durationMinutes: durationMinutes, durationSeconds: durationSeconds });
           }
         } catch (e) {
           console.error('[FocusTimer] Error in countdown interval:', e);
@@ -968,9 +1000,16 @@ const FocusTimer = (function() {
         intervalId = null;
       }
       
-      // Re-enable duration input
+      // Stop completion sound if playing
+      stopCompletionSound();
+      
+      // Re-enable duration inputs
       if (durationInput) {
         durationInput.disabled = false;
+      }
+      
+      if (secondsInput) {
+        secondsInput.disabled = false;
       }
     } catch (e) {
       console.error('[FocusTimer] Error stopping timer:', e);
@@ -979,7 +1018,7 @@ const FocusTimer = (function() {
 
   /**
    * Reset the timer to initial duration
-   * Restores remainingTime to duration * 60 seconds
+   * Restores remainingTime to duration in seconds
    * @public
    */
   function reset() {
@@ -989,8 +1028,8 @@ const FocusTimer = (function() {
         stop();
       }
       
-      // Reset remaining time to full duration
-      remainingTime = duration * 60;
+      // Reset remaining time to full duration (minutes * 60 + seconds)
+      remainingTime = (durationMinutes * 60) + durationSeconds;
       updateDisplay();
       
       // Hide completion indicator
@@ -1006,22 +1045,49 @@ const FocusTimer = (function() {
    * Set timer duration
    * Only allowed when timer is not running
    * @public
-   * @param {number} minutes - Duration in minutes (1-60)
+   * @param {number} minutes - Duration in minutes (0-60)
+   * @param {number} seconds - Duration in seconds (0-59)
    * @returns {boolean} True if duration was set, false if invalid or timer is running
    */
-  function setDuration(minutes) {
+  function setDuration(minutes, seconds) {
     // Don't allow duration changes while timer is running
     if (isRunning) {
       return false;
     }
 
-    // Validate duration is an integer between 1 and 60
+    // Validate minutes is an integer between 0 and 60
     const parsedMinutes = parseInt(minutes, 10);
-    if (isNaN(parsedMinutes) || parsedMinutes < 1 || parsedMinutes > 60) {
+    if (isNaN(parsedMinutes) || parsedMinutes < 0 || parsedMinutes > 60) {
       // Show validation message for invalid duration
       if (typeof NotificationManager !== 'undefined') {
         NotificationManager.showNotification(
-          'Timer duration must be between 1 and 60 minutes',
+          'Timer minutes must be between 0 and 60',
+          'warning',
+          3000
+        );
+      }
+      return false;
+    }
+
+    // Validate seconds is an integer between 0 and 59
+    const parsedSeconds = parseInt(seconds, 10);
+    if (isNaN(parsedSeconds) || parsedSeconds < 0 || parsedSeconds > 59) {
+      // Show validation message for invalid seconds
+      if (typeof NotificationManager !== 'undefined') {
+        NotificationManager.showNotification(
+          'Timer seconds must be between 0 and 59',
+          'warning',
+          3000
+        );
+      }
+      return false;
+    }
+
+    // Validate total duration is not zero
+    if (parsedMinutes === 0 && parsedSeconds === 0) {
+      if (typeof NotificationManager !== 'undefined') {
+        NotificationManager.showNotification(
+          'Timer duration must be greater than 0',
           'warning',
           3000
         );
@@ -1030,14 +1096,15 @@ const FocusTimer = (function() {
     }
 
     // Update duration
-    duration = parsedMinutes;
+    durationMinutes = parsedMinutes;
+    durationSeconds = parsedSeconds;
     
     // Reset remaining time to new duration
-    remainingTime = duration * 60;
+    remainingTime = (durationMinutes * 60) + durationSeconds;
     updateDisplay();
     
     // Save to Local Storage
-    StorageManager.set('timerDuration', duration);
+    StorageManager.set('timerDuration', { minutes: durationMinutes, seconds: durationSeconds });
     
     return true;
   }
@@ -1048,13 +1115,15 @@ const FocusTimer = (function() {
    */
   function handleDurationChange() {
     try {
-      if (durationInput) {
-        const newDuration = durationInput.value;
-        const success = setDuration(newDuration);
+      if (durationInput && secondsInput) {
+        const newMinutes = durationInput.value;
+        const newSeconds = secondsInput.value;
+        const success = setDuration(newMinutes, newSeconds);
         
-        // If invalid, reset input to current duration
+        // If invalid, reset inputs to current duration
         if (!success) {
-          durationInput.value = duration;
+          durationInput.value = durationMinutes;
+          secondsInput.value = durationSeconds;
         }
       }
     } catch (e) {
@@ -1069,9 +1138,20 @@ const FocusTimer = (function() {
   function loadDuration() {
     const savedDuration = StorageManager.get('timerDuration');
     if (savedDuration !== null) {
-      // Validate saved duration
-      if (savedDuration >= 1 && savedDuration <= 60) {
-        duration = savedDuration;
+      // Check if new format (object with minutes and seconds)
+      if (typeof savedDuration === 'object' && savedDuration.minutes !== undefined) {
+        // Validate saved duration
+        if (savedDuration.minutes >= 0 && savedDuration.minutes <= 60 &&
+            savedDuration.seconds >= 0 && savedDuration.seconds <= 59) {
+          durationMinutes = savedDuration.minutes;
+          durationSeconds = savedDuration.seconds;
+        }
+      } else if (typeof savedDuration === 'number') {
+        // Old format (just minutes), migrate to new format
+        if (savedDuration >= 1 && savedDuration <= 60) {
+          durationMinutes = savedDuration;
+          durationSeconds = 0;
+        }
       }
     }
   }
@@ -1092,6 +1172,7 @@ const FocusTimer = (function() {
       stopButton = document.getElementById('timer-stop');
       resetButton = document.getElementById('timer-reset');
       durationInput = document.getElementById('timer-duration');
+      secondsInput = document.getElementById('timer-seconds');
       timerComplete = document.getElementById('timer-complete');
       
       // Check if required elements exist
@@ -1104,11 +1185,15 @@ const FocusTimer = (function() {
       loadDuration();
       
       // Initialize remaining time to full duration
-      remainingTime = duration * 60;
+      remainingTime = (durationMinutes * 60) + durationSeconds;
       
-      // Update duration input to reflect loaded duration
+      // Update duration inputs to reflect loaded duration
       if (durationInput) {
-        durationInput.value = duration;
+        durationInput.value = durationMinutes;
+      }
+      
+      if (secondsInput) {
+        secondsInput.value = durationSeconds;
       }
       
       // Initial display update
@@ -1130,6 +1215,11 @@ const FocusTimer = (function() {
       if (durationInput) {
         durationInput.addEventListener('change', handleDurationChange);
         durationInput.addEventListener('blur', handleDurationChange);
+      }
+      
+      if (secondsInput) {
+        secondsInput.addEventListener('change', handleDurationChange);
+        secondsInput.addEventListener('blur', handleDurationChange);
       }
     } catch (e) {
       console.error('[FocusTimer] Initialization failed:', e);
@@ -2290,7 +2380,7 @@ const DataManager = (function() {
   function getAllData() {
     return {
       userName: StorageManager.get('userName') || '',
-      timerDuration: StorageManager.get('timerDuration') || 25,
+      timerDuration: StorageManager.get('timerDuration') || { minutes: 25, seconds: 0 },
       tasks: StorageManager.get('tasks') || [],
       taskSortOrder: StorageManager.get('taskSortOrder') || 'creation',
       links: StorageManager.get('links') || [],
@@ -2378,7 +2468,20 @@ const DataManager = (function() {
 
     // Validate types
     if (typeof data.userName !== 'string') return false;
-    if (typeof data.timerDuration !== 'number') return false;
+    
+    // Timer duration can be number (old format) or object (new format)
+    if (typeof data.timerDuration === 'number') {
+      // Old format, valid
+    } else if (typeof data.timerDuration === 'object') {
+      // New format, check structure
+      if (typeof data.timerDuration.minutes !== 'number' || 
+          typeof data.timerDuration.seconds !== 'number') {
+        return false;
+      }
+    } else {
+      return false;
+    }
+    
     if (!Array.isArray(data.tasks)) return false;
     if (typeof data.taskSortOrder !== 'string') return false;
     if (!Array.isArray(data.links)) return false;

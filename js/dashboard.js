@@ -794,7 +794,7 @@ const FocusTimer = (function() {
 
   /**
    * Play completion sound using Web Audio API
-   * Creates 5.5 second beep pattern without external audio files
+   * Creates 10 second beep pattern with crescendo (quiet to loud)
    * @private
    */
   function playCompletionSound() {
@@ -812,10 +812,11 @@ const FocusTimer = (function() {
       // Create audio context
       audioContext = new AudioContext();
       
-      // Beep pattern: 5 beeps over 5.5 seconds
-      // Beep at: 0s, 1s, 2s, 3s, 4.5s
-      const beepTimes = [0, 1000, 2000, 3000, 4500];
-      const frequencies = [800, 900, 1000, 1100, 1200]; // Ascending tones
+      // Beep pattern: 10 beeps over 10 seconds with crescendo
+      // Beep every 1 second: 0s, 1s, 2s, 3s, 4s, 5s, 6s, 7s, 8s, 9s
+      const beepTimes = [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000];
+      const frequencies = [600, 650, 700, 750, 800, 850, 900, 950, 1000, 1100]; // Ascending tones
+      const volumes = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6]; // Crescendo: quiet to loud
       
       beepTimes.forEach(function(delay, index) {
         const timeout = setTimeout(function() {
@@ -830,11 +831,11 @@ const FocusTimer = (function() {
             
             oscillator.frequency.value = frequencies[index];
             oscillator.type = 'sine';
-            gainNode.gain.value = 0.3;
+            gainNode.gain.value = volumes[index]; // Crescendo effect
             
-            // Each beep lasts 200ms
+            // Each beep lasts 300ms
             oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.2);
+            oscillator.stop(audioContext.currentTime + 0.3);
           } catch (e) {
             console.error('[FocusTimer] Error playing beep:', e);
           }

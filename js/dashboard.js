@@ -991,10 +991,15 @@ const FocusTimer = (function() {
   /**
    * Stop the countdown timer
    * Pauses countdown and preserves current remainingTime
+   * Also stops completion sound if playing
    * @public
    */
   function stop() {
     try {
+      // Stop completion sound if playing (even if timer not running)
+      stopCompletionSound();
+      
+      // If timer not running, nothing else to do
       if (!isRunning) {
         return;
       }
@@ -1006,9 +1011,6 @@ const FocusTimer = (function() {
         clearInterval(intervalId);
         intervalId = null;
       }
-      
-      // Stop completion sound if playing
-      stopCompletionSound();
       
       // Re-enable duration inputs
       if (durationInput) {

@@ -844,6 +844,46 @@ const FocusTimer = (function() {
   }
 
   /**
+   * Show browser notification for timer completion
+   * Uses Notification API for system-level alerts
+   * @private
+   */
+  function showBrowserNotification() {
+    try {
+      // Check if Notification API is supported
+      if (!('Notification' in window)) {
+        console.warn('[FocusTimer] Browser notifications not supported');
+        return;
+      }
+
+      // Check permission status
+      if (Notification.permission === 'granted') {
+        // Permission already granted, show notification
+        new Notification('Focus Timer Complete! 🎉', {
+          body: 'Time for a break. Great work!',
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="75" font-size="75">⏰</text></svg>',
+          requireInteraction: false,
+          silent: false
+        });
+      } else if (Notification.permission !== 'denied') {
+        // Request permission
+        Notification.requestPermission().then(function(permission) {
+          if (permission === 'granted') {
+            new Notification('Focus Timer Complete! 🎉', {
+              body: 'Time for a break. Great work!',
+              icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="75" font-size="75">⏰</text></svg>',
+              requireInteraction: false,
+              silent: false
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.error('[FocusTimer] Error showing browser notification:', e);
+    }
+  }
+
+  /**
    * Start the countdown timer
    * Begins countdown from current remainingTime
    * @public
@@ -890,6 +930,9 @@ const FocusTimer = (function() {
                 5000
               );
             }
+            
+            // Request browser notification permission and show
+            showBrowserNotification();
             
             // Play completion sound
             playCompletionSound();
